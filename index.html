@@ -159,11 +159,20 @@
     .gear-add{ grid-template-columns:1fr 1fr; }
     .gear-add > button{ grid-column:1 / -1; }
   }
-  .personal-gear-add{ grid-template-columns:1.6fr 1fr auto; }
+  .personal-gear-add{ grid-template-columns:1.3fr 0.8fr 0.9fr 1fr auto; }
   @media (max-width:700px){
     .personal-gear-add{ grid-template-columns:1fr 1fr; }
     .personal-gear-add > button{ grid-column:1 / -1; }
   }
+  .pgear-total{
+    font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--sand-bright);
+    background:rgba(201,166,107,0.1); border:1px solid var(--sand);
+    padding:8px 14px; border-radius:4px; margin:-6px 0 18px;
+  }
+  .pgear-total b{ color:var(--sand-bright); }
+  .item-rental{ font-family:'JetBrains Mono',monospace; font-size:11px; margin-top:2px; }
+  .item-rental.sewa{ color:var(--sand-bright); }
+  .item-rental.non-sewa{ color:var(--paper-dim); opacity:0.6; }
   .gear-category{ margin-bottom:26px; }
   .gear-category h3{ font-size:14px; color:var(--sand-bright); margin:0 0 10px; display:flex; align-items:center; gap:8px; }
   .gear-category h3::after{ content:''; flex:1; height:1px; background:var(--line); }
@@ -350,9 +359,15 @@
     <div class="gear-add personal-gear-add no-print" id="personal-gear-add-row">
       <input id="pgear-name" type="text" placeholder="Nama barang pribadimu...">
       <input id="pgear-qty" type="text" placeholder="Jml (cth. 1 buah)">
+      <select id="pgear-rental-type" onchange="togglePgearPrice()">
+        <option value="Non Sewa">Non Sewa</option>
+        <option value="Sewa">Sewa</option>
+      </select>
+      <input id="pgear-price" type="number" min="0" placeholder="Harga sewa (Rp)" style="display:none;">
       <button class="btn" onclick="addPersonalGear()">+ Tambah Perlengkapan Pribadi</button>
     </div>
     <p class="empty-note no-print">Perlengkapan pribadi hanya terlihat dan bisa dikelola oleh pemiliknya sendiri — anggota lain maupun admin tidak bisa melihatnya.</p>
+    <div class="pgear-total no-print" id="pgear-total" style="display:none;"></div>
 
     <div id="gear-lists"></div>
   </section>
@@ -694,6 +709,22 @@ function renderGear(){
     return currentEmail && owner === currentEmail;
   }).length;
   document.getElementById('gear-count').textContent = visibleCount + ' barang';
+
+  const personalTotal = gearItems
+    .filter(g => g.category === 'Perlengkapan Pribadi'
+      && (g.owner_email || '').toLowerCase() === currentEmail
+      && g.rental_type === 'Sewa')
+    .reduce((sum, g) => sum + (Number(g.rental_price) || 0), 0);
+  const totalEl = document.getElementById('pgear-total');
+  if(totalEl){
+    if(personalTotal > 0){
+      totalEl.style.display = 'block';
+      totalEl.innerHTML = `Total harga sewa perlengkapan pribadimu: <b>${formatRupiah(personalTotal)}</b>`;
+    }else{
+      totalEl.style.display = 'none';
+    }
+  }
+
   const cats = ['Perlengkapan Pribadi','Perlengkapan Kelompok','P3K & Darurat','Makanan & Masak'];
   const sections = cats.map(cat => {
     const isPersonal = cat === 'Perlengkapan Pribadi';
@@ -721,6 +752,7 @@ function renderGear(){
             <div>
               <div class="item-name">${escapeHtml(g.name)}</div>
               <div class="item-qty">${escapeHtml(g.quantity||'')}</div>
+              ${isPersonal ? renderRentalInfo(g) : ''}
             </div>
             ${isPersonal ? `<span class="assign-label">Milikmu</span>` : (isAdmin ? `
               <select class="assign" onchange="assignGear('${g.id}', this.value)">
@@ -737,6 +769,22 @@ function renderGear(){
     `;
   }).join('');
   container.innerHTML = sections || '<div class="empty-note">Belum ada perlengkapan.</div>';
+}
+
+function formatRupiah(n){
+  return 'Rp' + Number(n||0).toLocaleString('id-ID');
+}
+function renderRentalInfo(g){
+  if(g.rental_type === 'Sewa'){
+    return `<div class="item-rental sewa">Sewa · ${formatRupiah(g.rental_price)}</div>`;
+  }
+  return `<div class="item-rental non-sewa">Non Sewa</div>`;
+}
+function togglePgearPrice(){
+  const type = document.getElementById('pgear-rental-type').value;
+  const priceInput = document.getElementById('pgear-price');
+  priceInput.style.display = type === 'Sewa' ? '' : 'none';
+  if(type !== 'Sewa') priceInput.value = '';
 }
 
 async function addGear(){
@@ -760,13 +808,18 @@ async function addPersonalGear(){
   if(!currentEmail) return;
   const name = document.getElementById('pgear-name').value.trim();
   const quantity = document.getElementById('pgear-qty').value.trim();
+  const rental_type = document.getElementById('pgear-rental-type').value || 'Non Sewa';
+  const rental_price = rental_type === 'Sewa' ? (parseFloat(document.getElementById('pgear-price').value) || 0) : 0;
   if(!name) return;
   try{
     clearSyncError();
-    const inserted = await sb('/gear', { method:'POST', body: JSON.stringify({ category:'Perlengkapan Pribadi', name, quantity, owner_email: currentEmail, packed:false }) });
+    const inserted = await sb('/gear', { method:'POST', body: JSON.stringify({ category:'Perlengkapan Pribadi', name, quantity, owner_email: currentEmail, packed:false, rental_type, rental_price }) });
     gearItems.push(inserted[0]);
     document.getElementById('pgear-name').value = '';
     document.getElementById('pgear-qty').value = '';
+    document.getElementById('pgear-rental-type').value = 'Non Sewa';
+    document.getElementById('pgear-price').value = '';
+    document.getElementById('pgear-price').style.display = 'none';
     renderGear();
   }catch(e){ showSyncError('Gagal menambah barang pribadi: ' + e.message); }
 }
