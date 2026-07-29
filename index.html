@@ -151,13 +151,29 @@
   .btn:disabled{ opacity:0.4; cursor:not-allowed; }
 
   .gear-add{
-    display:grid; grid-template-columns:1.6fr 1fr 0.7fr 1fr auto; gap:8px;
+    display:grid; grid-template-columns:1.3fr 0.9fr 0.6fr 0.9fr 0.8fr 0.8fr auto; gap:8px;
     background:rgba(20,37,26,0.5); border:1px solid var(--line);
     padding:14px; border-radius:4px; margin-bottom:22px;
   }
   @media (max-width:700px){
     .gear-add{ grid-template-columns:1fr 1fr; }
     .gear-add > button{ grid-column:1 / -1; }
+  }
+  .ggear-total{
+    font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--sand-bright);
+    background:rgba(201,166,107,0.1); border:1px solid var(--sand);
+    padding:8px 14px; border-radius:4px; margin:-6px 0 18px;
+  }
+  .ggear-total b{ color:var(--sand-bright); }
+  .gear-summary{
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--paper-dim);
+    background:rgba(20,37,26,0.5); border:1px solid var(--line);
+    padding:10px 14px; border-radius:4px; margin:0 0 18px; line-height:1.8;
+  }
+  .gear-summary b{ color:var(--sand-bright); }
+  .filter-label{
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--paper-dim); align-self:center; margin-right:2px;
   }
   .personal-gear-add{ grid-template-columns:1.3fr 0.8fr 0.9fr 1fr auto; }
   @media (max-width:700px){
@@ -242,8 +258,8 @@
     .hero, .no-print, .gate{ display:none !important; }
     body{ background:#fff; color:#111; }
     .card, main{ padding:0; margin:0 !important; }
-    .pgear-total{ background:none !important; border:1px solid #111 !important; color:#111 !important; }
-    .pgear-total b{ color:#111 !important; }
+    .pgear-total, .ggear-total, .gear-summary{ background:none !important; border:1px solid #111 !important; color:#111 !important; }
+    .pgear-total b, .ggear-total b, .gear-summary b{ color:#111 !important; }
     .item-rental.sewa{ color:#111 !important; }
     .item-rental.non-sewa{ color:#555 !important; }
   }
@@ -352,21 +368,35 @@
   <section class="card">
     <div class="section-head">
       <h2>Daftar Perlengkapan</h2>
-      <span class="count mono" id="gear-count">0 barang</span>
+
     </div>
+
+    <div class="gear-summary" id="gear-summary" style="display:none;"></div>
 
     <div class="gear-add no-print" id="gear-add-row">
       <input id="gear-name" type="text" placeholder="Nama barang...">
-      <select id="gear-cat">
+      <select id="gear-cat" onchange="toggleGearCatFields()">
         <option>Perlengkapan Kelompok</option>
         <option>P3K &amp; Darurat</option>
         <option>Makanan &amp; Masak</option>
       </select>
       <input id="gear-qty" type="text" placeholder="Jml (cth. 1 buah)">
       <select id="gear-assign"><option value="">Belum ditentukan</option></select>
+      <select id="gear-rental-type" onchange="toggleGearPrice()">
+        <option value="Non Sewa">Non Sewa</option>
+        <option value="Sewa">Sewa</option>
+      </select>
+      <input id="gear-price" type="number" min="0" placeholder="Harga sewa (Rp)" style="display:none;">
       <button class="btn" onclick="addGear()">+ Tambah</button>
     </div>
-    <p class="empty-note no-print" id="member-gear-hint" style="display:none;">Kamu bisa mencentang barang kelompok yang menjadi tanggung jawabmu. Hanya admin yang bisa menambah, menghapus, atau mengubah pembagian barang kelompok.</p>
+    <div class="ggear-total" id="ggear-total" style="display:none;"></div>
+    <div class="pgear-filter no-print" id="ggear-filter-row">
+      <span class="filter-label">Perlengkapan Kelompok:</span>
+      <button type="button" class="filter-btn active" data-filter="all" onclick="setGgearFilter('all')">Semua</button>
+      <button type="button" class="filter-btn" data-filter="Sewa" onclick="setGgearFilter('Sewa')">Sewa</button>
+      <button type="button" class="filter-btn" data-filter="Non Sewa" onclick="setGgearFilter('Non Sewa')">Non Sewa</button>
+    </div>
+    <div id="gear-list-kelompok"></div>
 
     <div class="gear-add personal-gear-add no-print" id="personal-gear-add-row">
       <input id="pgear-name" type="text" placeholder="Nama barang pribadimu...">
@@ -382,12 +412,14 @@
     <div class="pgear-total" id="pgear-total" style="display:none;"></div>
 
     <div class="pgear-filter no-print" id="pgear-filter-row">
+      <span class="filter-label">Perlengkapan Pribadi:</span>
       <button type="button" class="filter-btn active" data-filter="all" onclick="setPgearFilter('all')">Semua</button>
       <button type="button" class="filter-btn" data-filter="Sewa" onclick="setPgearFilter('Sewa')">Sewa</button>
       <button type="button" class="filter-btn" data-filter="Non Sewa" onclick="setPgearFilter('Non Sewa')">Non Sewa</button>
     </div>
+    <div id="gear-list-pribadi"></div>
 
-    <div id="gear-lists"></div>
+    <div id="gear-list-rest"></div>
   </section>
 
   <svg class="ridge" viewBox="0 0 800 30" preserveAspectRatio="none"><polyline points="0,20 100,5 180,17 260,3 340,20 420,10 500,22 580,6 660,18 740,4 800,15" fill="none" stroke="#C9A66B" stroke-width="1.5"/></svg>
@@ -430,6 +462,7 @@ let currentMemberId = null;
 let currentEmail = null;
 let pendingEmail = null;
 let pgearFilter = 'all';
+let ggearFilter = 'all';
 
 async function sb(path, options={}){
   const res = await fetch(`${SUPABASE_URL}${path}`, {
@@ -635,7 +668,6 @@ function render(){
   document.getElementById('member-tim-hint').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('gear-add-row').style.display = isAdmin ? 'grid' : 'none';
   document.getElementById('jadwal-add-row').style.display = isAdmin ? 'grid' : 'none';
-  document.getElementById('member-gear-hint').style.display = isAdmin ? 'none' : 'block';
 
   renderTim();
   renderGear();
@@ -721,13 +753,13 @@ async function removeTim(id, email){
 
 /* ---------- GEAR ---------- */
 function renderGear(){
-  const container = document.getElementById('gear-lists');
   const visibleCount = gearItems.filter(g => {
     if(g.category !== 'Perlengkapan Pribadi') return true;
     const owner = (g.owner_email || '').toLowerCase();
     return currentEmail && owner === currentEmail;
   }).length;
-  document.getElementById('gear-count').textContent = visibleCount + ' barang';
+  const gearCountEl = document.getElementById('gear-count');
+  if(gearCountEl) gearCountEl.textContent = visibleCount + ' barang';
 
   const personalTotal = gearItems
     .filter(g => g.category === 'Perlengkapan Pribadi'
@@ -744,17 +776,62 @@ function renderGear(){
     }
   }
 
-  const cats = ['Perlengkapan Pribadi','Perlengkapan Kelompok','P3K & Darurat','Makanan & Masak'];
-  const sections = cats.map(cat => {
+  // Total harga sewa khusus Perlengkapan Kelompok (barang sewa dibawa oleh "Kelompok")
+  const ggearTotal = gearItems
+    .filter(g => g.category === 'Perlengkapan Kelompok' && g.rental_type === 'Sewa')
+    .reduce((sum, g) => sum + (Number(g.rental_price) || 0), 0);
+  const ggearTotalEl = document.getElementById('ggear-total');
+  if(ggearTotalEl){
+    if(ggearTotal > 0){
+      ggearTotalEl.style.display = 'block';
+      ggearTotalEl.innerHTML = `Total harga sewa perlengkapan kelompok: <b>${formatRupiah(ggearTotal)}</b>`;
+    }else{
+      ggearTotalEl.style.display = 'none';
+    }
+  }
+
+  // Total barang dibawa per anggota (bukan total keseluruhan) — barang kelompok yang disewa dihitung sebagai "Kelompok"
+  const carryCounts = {};
+  gearItems.forEach(g => {
+    if(g.category === 'Perlengkapan Pribadi'){
+      const owner = g.owner_email || 'Belum ditentukan';
+      carryCounts[owner] = (carryCounts[owner] || 0) + 1;
+      return;
+    }
+    const key = (g.category === 'Perlengkapan Kelompok' && g.rental_type === 'Sewa')
+      ? 'Kelompok'
+      : (g.owner_email || 'Belum ditentukan');
+    carryCounts[key] = (carryCounts[key] || 0) + 1;
+  });
+  const summaryEl = document.getElementById('gear-summary');
+  if(summaryEl){
+    if(currentEmail){
+      const myCount = carryCounts[currentEmail] || 0;
+      const kelompokCount = carryCounts['Kelompok'] || 0;
+      summaryEl.style.display = 'block';
+      summaryEl.innerHTML =
+        `<div>Total barang dibawa <b>${escapeHtml(currentEmail)}</b>: ${myCount} barang</div>` +
+        `<div>Total Barang Kelompok: <b>${kelompokCount}</b> barang</div>`;
+    }else{
+      summaryEl.style.display = 'none';
+    }
+  }
+
+  const buildSection = (cat) => {
     const isPersonal = cat === 'Perlengkapan Pribadi';
     // Perlengkapan Pribadi: hanya tampilkan barang milik email yang sedang login.
     // Tidak ada pengecualian untuk admin — privasi berlaku untuk semua orang.
+    const isGroup = cat === 'Perlengkapan Kelompok';
     const items = gearItems.filter(g => {
       if(g.category !== cat) return false;
       if(isPersonal){
         const owner = (g.owner_email || '').toLowerCase();
         if(!(currentEmail && owner === currentEmail)) return false;
         if(pgearFilter !== 'all' && (g.rental_type || 'Non Sewa') !== pgearFilter) return false;
+        return true;
+      }
+      if(isGroup){
+        if(ggearFilter !== 'all' && (g.rental_type || 'Non Sewa') !== ggearFilter) return false;
         return true;
       }
       return true;
@@ -765,6 +842,7 @@ function renderGear(){
         <h3>${cat}</h3>
         ${items.map(g => {
           const owner = (g.owner_email || '').toLowerCase();
+          const isGroupRental = isGroup && g.rental_type === 'Sewa';
           const canCheck = isPersonal ? (currentEmail && owner === currentEmail) : (isAdmin || (currentEmail && owner === currentEmail));
           const canRemove = isPersonal ? (currentEmail && owner === currentEmail) : isAdmin;
           return `
@@ -773,14 +851,14 @@ function renderGear(){
             <div>
               <div class="item-name">${escapeHtml(g.name)}</div>
               <div class="item-qty">${escapeHtml(g.quantity||'')}</div>
-              ${isPersonal ? renderRentalInfo(g) : ''}
+              ${(isPersonal || isGroup) ? renderRentalInfo(g) : ''}
             </div>
-            ${isPersonal ? `<span class="assign-label">Milikmu</span>` : (isAdmin ? `
+            ${isPersonal ? `<span class="assign-label" title="${escapeHtml(g.owner_email||'')}">${g.owner_email ? escapeHtml(g.owner_email) : 'Belum ditentukan'}</span>` : (isGroupRental ? `<span class="assign-label">Kelompok</span>` : (isAdmin ? `
               <select class="assign" onchange="assignGear('${g.id}', this.value)">
                 <option value="" ${!g.owner_email?'selected':''}>Belum ditentukan</option>
                 ${members.map(p=>`<option value="${escapeHtml(p.email)}" ${g.owner_email===p.email?'selected':''}>${escapeHtml(p.email)}</option>`).join('')}
               </select>
-            ` : `<span class="assign-label" title="${escapeHtml(g.owner_email||'')}">${g.owner_email ? escapeHtml(g.owner_email) : 'Belum ditentukan'}</span>`)}
+            ` : `<span class="assign-label" title="${escapeHtml(g.owner_email||'')}">${g.owner_email ? escapeHtml(g.owner_email) : 'Belum ditentukan'}</span>`))}
             <span></span>
             ${canRemove ? `<button class="remove-x" onclick="removeGear('${g.id}')" title="Hapus">✕</button>` : `<span></span>`}
           </div>
@@ -788,13 +866,35 @@ function renderGear(){
         }).join('')}
       </div>
     `;
-  }).join('');
-  container.innerHTML = sections || '<div class="empty-note">Belum ada perlengkapan.</div>';
+  };
+
+  const kelompokEl = document.getElementById('gear-list-kelompok');
+  if(kelompokEl) kelompokEl.innerHTML = buildSection('Perlengkapan Kelompok');
+
+  const pribadiEl = document.getElementById('gear-list-pribadi');
+  if(pribadiEl) pribadiEl.innerHTML = buildSection('Perlengkapan Pribadi');
+
+  const restEl = document.getElementById('gear-list-rest');
+  if(restEl){
+    const restSections = ['P3K & Darurat','Makanan & Masak'].map(buildSection).join('');
+    restEl.innerHTML = restSections;
+  }
+
+  if(!kelompokEl?.innerHTML && !pribadiEl?.innerHTML && !(restEl?.innerHTML)){
+    if(restEl) restEl.innerHTML = '<div class="empty-note">Belum ada perlengkapan.</div>';
+  }
 }
 
 function setPgearFilter(f){
   pgearFilter = f;
   document.querySelectorAll('#pgear-filter-row .filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === f);
+  });
+  renderGear();
+}
+function setGgearFilter(f){
+  ggearFilter = f;
+  document.querySelectorAll('#ggear-filter-row .filter-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.filter === f);
   });
   renderGear();
@@ -815,19 +915,60 @@ function togglePgearPrice(){
   if(type !== 'Sewa') priceInput.value = '';
 }
 
+function toggleGearCatFields(){
+  const cat = document.getElementById('gear-cat').value;
+  const isGroup = cat === 'Perlengkapan Kelompok';
+  const rentalType = document.getElementById('gear-rental-type');
+  const assign = document.getElementById('gear-assign');
+  rentalType.style.display = isGroup ? '' : 'none';
+  document.getElementById('gear-price').style.display = (isGroup && rentalType.value === 'Sewa') ? '' : 'none';
+  if(!isGroup){
+    rentalType.value = 'Non Sewa';
+    document.getElementById('gear-price').value = '';
+  }
+  // Barang sewa kelompok otomatis dibawa "Kelompok", jadi penugasan per-anggota disembunyikan.
+  const isGroupRental = isGroup && rentalType.value === 'Sewa';
+  assign.style.display = isGroupRental ? 'none' : '';
+  if(isGroupRental) assign.value = '';
+}
+function toggleGearPrice(){
+  const type = document.getElementById('gear-rental-type').value;
+  const priceInput = document.getElementById('gear-price');
+  priceInput.style.display = type === 'Sewa' ? '' : 'none';
+  if(type !== 'Sewa') priceInput.value = '';
+  const assign = document.getElementById('gear-assign');
+  const isGroup = document.getElementById('gear-cat').value === 'Perlengkapan Kelompok';
+  const isGroupRental = isGroup && type === 'Sewa';
+  assign.style.display = isGroupRental ? 'none' : '';
+  if(isGroupRental) assign.value = '';
+}
+
 async function addGear(){
   if(!isAdmin) return;
   const name = document.getElementById('gear-name').value.trim();
   const category = document.getElementById('gear-cat').value;
   const quantity = document.getElementById('gear-qty').value.trim();
-  const owner_email = document.getElementById('gear-assign').value || null;
+  const isGroup = category === 'Perlengkapan Kelompok';
+  const rental_type = isGroup ? (document.getElementById('gear-rental-type').value || 'Non Sewa') : 'Non Sewa';
+  const isGroupRental = isGroup && rental_type === 'Sewa';
+  const rental_price = isGroupRental ? (parseFloat(document.getElementById('gear-price').value) || 0) : 0;
+  // Barang sewa kelompok otomatis "dibawa" oleh Kelompok, bukan anggota perorangan.
+  const owner_email = isGroupRental ? null : (document.getElementById('gear-assign').value || null);
   if(!name) return;
+  if(isGroupRental && rental_price <= 0){
+    showSyncError('Isi harga sewa untuk barang kelompok yang berstatus Sewa.');
+    return;
+  }
   try{
     clearSyncError();
-    const inserted = await sb('/gear', { method:'POST', body: JSON.stringify({ category, name, quantity, owner_email, packed:false }) });
+    const inserted = await sb('/gear', { method:'POST', body: JSON.stringify({ category, name, quantity, owner_email, packed:false, rental_type, rental_price }) });
     gearItems.push(inserted[0]);
     document.getElementById('gear-name').value = '';
     document.getElementById('gear-qty').value = '';
+    document.getElementById('gear-rental-type').value = 'Non Sewa';
+    document.getElementById('gear-price').value = '';
+    document.getElementById('gear-price').style.display = 'none';
+    document.getElementById('gear-assign').style.display = '';
     renderGear();
   }catch(e){ showSyncError('Gagal menambah barang: ' + e.message); }
 }
