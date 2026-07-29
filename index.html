@@ -173,6 +173,14 @@
   .item-rental{ font-family:'JetBrains Mono',monospace; font-size:11px; margin-top:2px; }
   .item-rental.sewa{ color:var(--sand-bright); }
   .item-rental.non-sewa{ color:var(--paper-dim); opacity:0.6; }
+  .pgear-filter{ display:flex; gap:8px; margin:0 0 14px; flex-wrap:wrap; }
+  .filter-btn{
+    background:transparent; border:1px solid var(--line); color:var(--paper-dim);
+    padding:6px 14px; border-radius:20px; font-family:'JetBrains Mono',monospace;
+    font-size:11px; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer;
+  }
+  .filter-btn:hover{ border-color:var(--sand); color:var(--sand-bright); }
+  .filter-btn.active{ background:var(--sand); border-color:var(--sand); color:var(--ink); }
   .gear-category{ margin-bottom:26px; }
   .gear-category h3{ font-size:14px; color:var(--sand-bright); margin:0 0 10px; display:flex; align-items:center; gap:8px; }
   .gear-category h3::after{ content:''; flex:1; height:1px; background:var(--line); }
@@ -234,6 +242,10 @@
     .hero, .no-print, .gate{ display:none !important; }
     body{ background:#fff; color:#111; }
     .card, main{ padding:0; margin:0 !important; }
+    .pgear-total{ background:none !important; border:1px solid #111 !important; color:#111 !important; }
+    .pgear-total b{ color:#111 !important; }
+    .item-rental.sewa{ color:#111 !important; }
+    .item-rental.non-sewa{ color:#555 !important; }
   }
 </style>
 </head>
@@ -367,7 +379,13 @@
       <button class="btn" onclick="addPersonalGear()">+ Tambah Perlengkapan Pribadi</button>
     </div>
     <p class="empty-note no-print">Perlengkapan pribadi hanya terlihat dan bisa dikelola oleh pemiliknya sendiri — anggota lain maupun admin tidak bisa melihatnya.</p>
-    <div class="pgear-total no-print" id="pgear-total" style="display:none;"></div>
+    <div class="pgear-total" id="pgear-total" style="display:none;"></div>
+
+    <div class="pgear-filter no-print" id="pgear-filter-row">
+      <button type="button" class="filter-btn active" data-filter="all" onclick="setPgearFilter('all')">Semua</button>
+      <button type="button" class="filter-btn" data-filter="Sewa" onclick="setPgearFilter('Sewa')">Sewa</button>
+      <button type="button" class="filter-btn" data-filter="Non Sewa" onclick="setPgearFilter('Non Sewa')">Non Sewa</button>
+    </div>
 
     <div id="gear-lists"></div>
   </section>
@@ -411,6 +429,7 @@ let isAdmin = false;
 let currentMemberId = null;
 let currentEmail = null;
 let pendingEmail = null;
+let pgearFilter = 'all';
 
 async function sb(path, options={}){
   const res = await fetch(`${SUPABASE_URL}${path}`, {
@@ -734,7 +753,9 @@ function renderGear(){
       if(g.category !== cat) return false;
       if(isPersonal){
         const owner = (g.owner_email || '').toLowerCase();
-        return currentEmail && owner === currentEmail;
+        if(!(currentEmail && owner === currentEmail)) return false;
+        if(pgearFilter !== 'all' && (g.rental_type || 'Non Sewa') !== pgearFilter) return false;
+        return true;
       }
       return true;
     });
@@ -771,6 +792,13 @@ function renderGear(){
   container.innerHTML = sections || '<div class="empty-note">Belum ada perlengkapan.</div>';
 }
 
+function setPgearFilter(f){
+  pgearFilter = f;
+  document.querySelectorAll('#pgear-filter-row .filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === f);
+  });
+  renderGear();
+}
 function formatRupiah(n){
   return 'Rp' + Number(n||0).toLocaleString('id-ID');
 }
