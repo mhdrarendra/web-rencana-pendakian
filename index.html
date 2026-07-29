@@ -155,7 +155,15 @@
     background:rgba(20,37,26,0.5); border:1px solid var(--line);
     padding:14px; border-radius:4px; margin-bottom:22px;
   }
-  @media (max-width:700px){ .gear-add{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:700px){
+    .gear-add{ grid-template-columns:1fr 1fr; }
+    .gear-add > button{ grid-column:1 / -1; }
+  }
+  .personal-gear-add{ grid-template-columns:1.6fr 1fr auto; }
+  @media (max-width:520px){
+    .personal-gear-add{ grid-template-columns:1fr 1fr; }
+    .personal-gear-add > button{ grid-column:1 / -1; }
+  }
   .gear-category{ margin-bottom:26px; }
   .gear-category h3{ font-size:14px; color:var(--sand-bright); margin:0 0 10px; display:flex; align-items:center; gap:8px; }
   .gear-category h3::after{ content:''; flex:1; height:1px; background:var(--line); }
@@ -339,7 +347,7 @@
     </div>
     <p class="empty-note no-print" id="member-gear-hint" style="display:none;">Kamu bisa mencentang barang kelompok yang menjadi tanggung jawabmu. Hanya admin yang bisa menambah, menghapus, atau mengubah pembagian barang kelompok.</p>
 
-    <div class="gear-add no-print" id="personal-gear-add-row" style="grid-template-columns:1.6fr 1fr auto;">
+    <div class="gear-add personal-gear-add no-print" id="personal-gear-add-row">
       <input id="pgear-name" type="text" placeholder="Nama barang pribadimu...">
       <input id="pgear-qty" type="text" placeholder="Jml (cth. 1 buah)">
       <button class="btn" onclick="addPersonalGear()">+ Tambah Perlengkapan Pribadi</button>
