@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rencana Pendakian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest-dark:#14251A;
+    --forest-mid:#1E3324;
+    --moss:#3F5B3D;
+    --moss-light:#557052;
+    --paper:#EDE6D3;
+    --paper-dim:#DDD3B7;
+    --sand:#C9A66B;
+    --sand-bright:#DDBE86;
+    --rescue:#C1502E;
+    --ink:#182016;
+    --line:rgba(237,230,211,0.14);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--forest-dark);
+    color:var(--paper);
+    font-family:'Work Sans',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .hidden{ display:none !important; }
+
+  .gate{
+    position:fixed; inset:0; z-index:50;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(85,112,82,0.35), transparent 55%),
+      linear-gradient(180deg, var(--forest-dark), var(--forest-mid));
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .gate-card{
+    max-width:420px; width:100%;
+    background:rgba(20,37,26,0.7); border:1px solid var(--line);
+    border-radius:6px; padding:32px 28px; text-align:center;
+  }
+  .gate-card h1{ font-size:30px; margin:0 0 6px; color:var(--paper); }
+  .gate-card p.sub{ color:var(--paper-dim); font-size:13.5px; margin:0 0 26px; }
+  .gate-panel{ text-align:left; margin-top:6px; }
+  .gate-panel label{
+    display:block; font-family:'JetBrains Mono',monospace; font-size:11px;
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--sand-bright); margin-bottom:6px;
+  }
+  .gate-panel .note{ font-size:12.5px; color:var(--paper-dim); margin:0 0 10px; text-align:center; }
+  .gate-panel .note b{ color:var(--sand-bright); word-break:break-all; }
+  .gate-error{ color:#F3A491; font-size:12.5px; margin-top:8px; }
+  .gate-actions{ display:flex; gap:8px; margin-top:16px; }
+  .gate-actions .btn{ flex:1; }
+
+  .hero{
+    position:relative; overflow:hidden; padding:64px 24px 56px;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(85,112,82,0.35), transparent 55%),
+      linear-gradient(180deg, var(--forest-dark), var(--forest-mid));
+    border-bottom:1px solid var(--line);
+  }
+  .contours{ position:absolute; inset:0; z-index:0; opacity:0.5; animation: drift 40s linear infinite; }
+  @keyframes drift{ 0%{ transform: translate(0,0); } 100%{ transform: translate(-60px,-40px); } }
+  @media (prefers-reduced-motion: reduce){ .contours{ animation:none; } }
+  .hero-inner{ position:relative; z-index:1; max-width:920px; margin:0 auto; }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace;
+    font-size:12px; letter-spacing:0.15em; text-transform:uppercase; color:var(--sand-bright); margin-bottom:14px;
+  }
+  .eyebrow::before{ content:''; width:18px; height:1px; background:var(--sand-bright); }
+  h1.display{ font-size:clamp(36px,7vw,64px); margin:0 0 10px; color:var(--paper); line-height:1.02; }
+  .hero p.sub{ color:var(--paper-dim); max-width:560px; font-size:15px; margin:0 0 22px; }
+
+  .role-banner{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    background:rgba(201,166,107,0.12); border:1px solid var(--sand);
+    padding:10px 16px; border-radius:4px; margin-bottom:22px; font-size:13px;
+  }
+  .role-banner b{ color:var(--sand-bright); }
+  .role-banner .actions{ display:flex; gap:8px; }
+
+  .sync-error{
+    background:rgba(193,80,46,0.18); border:1px solid var(--rescue); color:#F7D3C7;
+    padding:10px 16px; border-radius:4px; margin-bottom:18px; font-size:13px; display:none;
+  }
+
+  .trip-form{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:14px;
+    background:rgba(20,37,26,0.55); border:1px solid var(--line);
+    padding:20px; border-radius:4px; backdrop-filter:blur(2px);
+  }
+  @media (max-width:760px){ .trip-form{ grid-template-columns:1fr 1fr; } }
+  .field label{
+    display:block; font-family:'JetBrains Mono',monospace; font-size:11px;
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--sand-bright); margin-bottom:6px;
+  }
+  input, select{
+    width:100%; background:var(--paper); color:var(--ink);
+    border:1px solid transparent; border-radius:2px;
+    padding:9px 10px; font-family:'Work Sans',sans-serif; font-size:14px;
+  }
+  input:focus, select:focus{ outline:2px solid var(--sand); outline-offset:1px; }
+  input:disabled, select:disabled{ opacity:0.6; cursor:not-allowed; }
+
+  main{ max-width:920px; margin:0 auto; padding:0 24px 80px; }
+  section.card{ margin-top:44px; }
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:20px;
+  }
+  .section-head h2{ font-size:24px; margin:0; color:var(--paper); }
+  .section-head .count{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--sand-bright); }
+  .ridge{ width:100%; height:28px; margin:8px 0 0; opacity:0.6; }
+
+  .tim-list{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
+  .tim-chip{
+    display:flex; align-items:center; gap:8px;
+    background:var(--moss); border:1px solid var(--line);
+    padding:8px 8px 8px 14px; border-radius:20px; font-size:13.5px;
+  }
+  .tim-chip.me{ outline:2px solid var(--sand); }
+  .tim-chip.is-admin{ background:var(--sand); color:var(--ink); }
+  .tim-chip .dot{ width:8px; height:8px; border-radius:50%; background:var(--sand); flex-shrink:0; }
+  .tim-chip.is-admin .dot{ background:var(--ink); }
+  .tim-chip .badge{ font-family:'JetBrains Mono',monospace; font-size:10px; opacity:0.75; }
+  .tim-chip button{
+    background:none; border:none; color:var(--paper-dim); cursor:pointer;
+    width:22px; height:22px; border-radius:50%; font-size:14px; line-height:1;
+  }
+  .tim-chip.is-admin button{ color:var(--ink); }
+  .tim-chip button:hover{ background:rgba(0,0,0,0.2); color:var(--rescue); }
+  .add-row{ display:flex; gap:8px; }
+  .add-row input{ flex:1; }
+  .btn{
+    border:none; border-radius:2px; padding:9px 16px; cursor:pointer;
+    font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.06em;
+    text-transform:uppercase; background:var(--sand); color:var(--ink); transition:background .15s ease;
+  }
+  .btn:hover{ background:var(--sand-bright); }
+  .btn.ghost{ background:transparent; border:1px solid var(--sand); color:var(--sand-bright); }
+  .btn.danger{ background:var(--rescue); color:var(--paper); }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .gear-add{
+    display:grid; grid-template-columns:1.6fr 1fr 0.7fr 1fr auto; gap:8px;
+    background:rgba(20,37,26,0.5); border:1px solid var(--line);
+    padding:14px; border-radius:4px; margin-bottom:22px;
+  }
+  @media (max-width:700px){ .gear-add{ grid-template-columns:1fr 1fr; } }
+  .gear-category{ margin-bottom:26px; }
+  .gear-category h3{ font-size:14px; color:var(--sand-bright); margin:0 0 10px; display:flex; align-items:center; gap:8px; }
+  .gear-category h3::after{ content:''; flex:1; height:1px; background:var(--line); }
+  .gear-item{
+    display:grid; grid-template-columns:auto 1fr auto auto auto;
+    align-items:center; gap:12px; padding:10px 4px; border-bottom:1px dashed var(--line);
+  }
+  .gear-item.packed .item-name{ opacity:0.45; text-decoration:line-through; }
+  .gear-item.mine{ background:rgba(201,166,107,0.08); }
+  .checkbox{
+    width:20px; height:20px; border:2px solid var(--sand); border-radius:3px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    background:transparent; flex-shrink:0;
+  }
+  .checkbox.checked{ background:var(--sand); }
+  .checkbox.checked::after{ content:'✓'; color:var(--ink); font-size:13px; font-weight:700; }
+  .checkbox.locked{ opacity:0.35; cursor:not-allowed; }
+  .item-name{ font-size:14.5px; }
+  .item-qty{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--paper-dim); }
+  select.assign{ max-width:170px; font-size:12px; padding:6px 8px; background:var(--moss); color:var(--paper); border:1px solid var(--line); }
+  select.assign option{ background:var(--forest-mid); color:var(--paper); }
+  .assign-label{
+    max-width:170px; font-size:12px; padding:6px 8px; color:var(--paper-dim);
+    font-family:'JetBrains Mono',monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .remove-x{ background:none; border:none; color:var(--paper-dim); cursor:pointer; font-size:15px; }
+  .remove-x:hover{ color:var(--rescue); }
+  .empty-note{ color:var(--paper-dim); font-size:13px; font-style:italic; padding:10px 0; }
+
+  .jadwal-add{
+    display:grid; grid-template-columns:0.6fr 0.7fr 1.8fr 1.2fr auto; gap:8px;
+    background:rgba(20,37,26,0.5); border:1px solid var(--line);
+    padding:14px; border-radius:4px; margin-bottom:22px;
+  }
+  @media (max-width:760px){ .jadwal-add{ grid-template-columns:1fr 1fr; } }
+  .timeline{ position:relative; padding-left:26px; }
+  .timeline::before{
+    content:''; position:absolute; left:6px; top:6px; bottom:6px; width:2px;
+    background:repeating-linear-gradient(180deg, var(--sand) 0 6px, transparent 6px 12px);
+  }
+  .tl-item{ position:relative; padding-bottom:22px; }
+  .tl-item::before{
+    content:''; position:absolute; left:-26px; top:3px; width:12px; height:12px; border-radius:50%;
+    background:var(--forest-dark); border:2px solid var(--sand);
+  }
+  .tl-head{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .tl-day{
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em;
+    color:var(--ink); background:var(--sand); padding:2px 8px; border-radius:10px;
+  }
+  .tl-time{ font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--sand-bright); }
+  .tl-activity{ font-size:15px; margin:4px 0 2px; font-weight:500; }
+  .tl-note{ font-size:13px; color:var(--paper-dim); }
+  .tl-item .remove-x{ position:absolute; right:0; top:2px; }
+
+  footer{ text-align:center; padding:30px 24px 50px; color:var(--paper-dim); font-size:12px; font-family:'JetBrains Mono',monospace; }
+
+  @media print{
+    .hero, .no-print, .gate{ display:none !important; }
+    body{ background:#fff; color:#111; }
+    .card, main{ padding:0; margin:0 !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <h1 class="display">Basecamp</h1>
+    <p class="sub" id="gate-sub">Menghubungkan ke database...</p>
+
+    <div id="gate-body" class="hidden">
+      <div class="gate-panel" id="panel-email">
+        <label for="user-email">Masuk dengan email</label>
+        <input type="email" id="user-email" placeholder="nama@email.com">
+        <div class="gate-error hidden" id="email-error">Masukkan alamat email yang valid.</div>
+        <div class="gate-actions">
+          <button class="btn" onclick="submitLogin()">Masuk</button>
+        </div>
+      </div>
+
+      <div class="gate-panel hidden" id="panel-claim-admin">
+        <p class="note">Rencana ini belum punya admin.</p>
+        <p class="note">Jadikan <b id="claim-email-label"></b> sebagai satu-satunya admin?</p>
+        <div class="gate-actions">
+          <button class="btn" onclick="claimAdmin(true)">Ya, Jadikan Admin</button>
+          <button class="btn ghost" onclick="claimAdmin(false)">Masuk sebagai Anggota</button>
+        </div>
+      </div>
+
+      <div class="gate-panel hidden" id="panel-admin-pin">
+        <p class="note" id="adminpin-note">Masukkan PIN admin untuk <b id="adminpin-email-label"></b>.</p>
+        <label for="admin-pin">PIN Admin</label>
+        <input type="password" id="admin-pin" inputmode="numeric" autocomplete="current-password" placeholder="••••">
+        <div class="gate-error hidden" id="adminpin-error">PIN salah.</div>
+        <div class="gate-actions">
+          <button class="btn" onclick="submitAdminPin()">Masuk</button>
+          <button class="btn ghost" onclick="setupGate()">Kembali</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hero">
+  <svg class="contours" viewBox="0 0 800 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M-50,100 Q150,40 350,100 T750,90 T1150,110" stroke="#EDE6D3" stroke-width="1" fill="none" opacity="0.15"/>
+    <path d="M-50,150 Q150,90 350,150 T750,140 T1150,160" stroke="#EDE6D3" stroke-width="1" fill="none" opacity="0.15"/>
+    <path d="M-50,200 Q150,140 350,200 T750,190 T1150,210" stroke="#EDE6D3" stroke-width="1" fill="none" opacity="0.15"/>
+    <path d="M-50,250 Q150,190 350,250 T750,240 T1150,260" stroke="#EDE6D3" stroke-width="1" fill="none" opacity="0.15"/>
+    <path d="M-50,300 Q150,240 350,300 T750,290 T1150,310" stroke="#EDE6D3" stroke-width="1" fill="none" opacity="0.15"/>
+  </svg>
+  <div class="hero-inner">
+    <div class="eyebrow">Via Panderman</div>
+    <h1 class="display">Gunung<br>Buthak</h1>
+    <p class="sub">Langsung dilist ae bolo barang bawaanmu!<br> DILARANG MENINGGALKAN APAPUN SELAIN JEJAK!</p>
+
+    <div class="sync-error" id="sync-error"></div>
+
+    <div class="role-banner">
+      <span>Masuk sebagai: <b id="role-label">-</b></span>
+      <div class="actions">
+        <button class="btn ghost" onclick="manualRefresh()">Muat Ulang</button>
+        <button class="btn ghost" onclick="logout()">Ganti Akun</button>
+      </div>
+    </div>
+
+    <div class="trip-form">
+      <div class="field">
+        <label for="gunung">Nama Gunung</label>
+        <input id="gunung" type="text" placeholder="cth. Gunung Semeru">
+      </div>
+      <div class="field">
+        <label for="tanggal">Tanggal Mulai</label>
+        <input id="tanggal" type="date">
+      </div>
+      <div class="field">
+        <label for="hari">Durasi (hari)</label>
+        <input id="hari" type="number" min="1" value="2">
+      </div>
+      <div class="field">
+        <label for="jalur">Jalur Pendakian</label>
+        <input id="jalur" type="text" placeholder="cth. via Ranu Pani">
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <section class="card">
+    <div class="section-head">
+      <h2>Tim Pendakian</h2>
+      <span class="count mono" id="tim-count">0 orang</span>
+    </div>
+    <div class="tim-list" id="tim-list"></div>
+    <div class="add-row no-print" id="tim-add-row">
+      <input id="tim-input" type="email" placeholder="Email anggota tim...">
+      <button class="btn" onclick="addTim()">+ Tambah Anggota</button>
+    </div>
+    <p class="empty-note no-print" id="member-tim-hint" style="display:none;">Hanya admin yang bisa mendaftarkan anggota baru. Email yang belum terdaftar tidak bisa masuk.</p>
+  </section>
+
+  <svg class="ridge" viewBox="0 0 800 30" preserveAspectRatio="none"><polyline points="0,25 100,10 180,22 260,5 340,18 420,8 500,20 580,4 660,16 740,9 800,20" fill="none" stroke="#C9A66B" stroke-width="1.5"/></svg>
+
+  <section class="card">
+    <div class="section-head">
+      <h2>Daftar Perlengkapan</h2>
+      <span class="count mono" id="gear-count">0 barang</span>
+    </div>
+
+    <div class="gear-add no-print" id="gear-add-row">
+      <input id="gear-name" type="text" placeholder="Nama barang...">
+      <select id="gear-cat">
+        <option>Perlengkapan Kelompok</option>
+        <option>P3K &amp; Darurat</option>
+        <option>Makanan &amp; Masak</option>
+      </select>
+      <input id="gear-qty" type="text" placeholder="Jml (cth. 1 buah)">
+      <select id="gear-assign"><option value="">Belum ditentukan</option></select>
+      <button class="btn" onclick="addGear()">+ Tambah</button>
+    </div>
+    <p class="empty-note no-print" id="member-gear-hint" style="display:none;">Kamu bisa mencentang barang kelompok yang menjadi tanggung jawabmu. Hanya admin yang bisa menambah, menghapus, atau mengubah pembagian barang kelompok.</p>
+
+    <div class="gear-add no-print" id="personal-gear-add-row" style="grid-template-columns:1.6fr 1fr auto;">
+      <input id="pgear-name" type="text" placeholder="Nama barang pribadimu...">
+      <input id="pgear-qty" type="text" placeholder="Jml (cth. 1 buah)">
+      <button class="btn" onclick="addPersonalGear()">+ Tambah Perlengkapan Pribadi</button>
+    </div>
+    <p class="empty-note no-print">Perlengkapan pribadi hanya terlihat dan bisa dikelola oleh pemiliknya sendiri — anggota lain maupun admin tidak bisa melihatnya.</p>
+
+    <div id="gear-lists"></div>
+  </section>
+
+  <svg class="ridge" viewBox="0 0 800 30" preserveAspectRatio="none"><polyline points="0,20 100,5 180,17 260,3 340,20 420,10 500,22 580,6 660,18 740,4 800,15" fill="none" stroke="#C9A66B" stroke-width="1.5"/></svg>
+
+  <section class="card">
+    <div class="section-head">
+      <h2>Jadwal Pendakian</h2>
+      <span class="count mono" id="jadwal-count">0 agenda</span>
+    </div>
+
+    <div class="jadwal-add no-print" id="jadwal-add-row">
+      <input id="j-hari" type="number" min="1" value="1" placeholder="Hari ke-">
+      <input id="j-waktu" type="time" value="06:00">
+      <input id="j-kegiatan" type="text" placeholder="Kegiatan (cth. Tiba di Pos 2)">
+      <input id="j-ket" type="text" placeholder="Keterangan (opsional)">
+      <button class="btn" onclick="addJadwal()">+ Tambah</button>
+    </div>
+
+    <div class="timeline" id="jadwal-list"></div>
+  </section>
+
+  <div class="no-print" style="margin-top:40px; display:flex; gap:10px;">
+    <button class="btn ghost" onclick="window.print()">Cetak Rencana</button>
+  </div>
+</main>
+
+<footer>Data tersambung langsung ke Supabase · Basecamp Planner</footer>
+
+<script>
+const SUPABASE_URL = 'https://xriqlciutymjcgiayjsn.supabase.co/rest/v1';
+const SUPABASE_KEY = 'sb_publishable_ggLUZ3I4GV-Z_vRwj3rxGQ_yyFRIC_Y';
+
+let trip = { id:null, mountain:'', route:'', start_date:'', duration:2 };
+let members = [];
+let gearItems = [];
+let scheduleItems = [];
+
+let isAdmin = false;
+let currentMemberId = null;
+let currentEmail = null;
+let pendingEmail = null;
+
+async function sb(path, options={}){
+  const res = await fetch(`${SUPABASE_URL}${path}`, {
+    method: options.method || 'GET',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || 'return=representation',
+      ...(options.headers||{})
+    },
+    body: options.body
+  });
+  if(!res.ok){
+    let detail = '';
+    try{ detail = (await res.json()).message || ''; }catch(e){}
+    throw new Error(`(${res.status}) ${detail || 'Permintaan ke Supabase gagal.'}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+function showSyncError(msg){
+  const el = document.getElementById('sync-error');
+  el.textContent = msg + ' — periksa Row Level Security (RLS) pada tabel Supabase kamu.';
+  el.style.display = 'block';
+}
+function clearSyncError(){
+  document.getElementById('sync-error').style.display = 'none';
+}
+
+async function loadTrip(){
+  const rows = await sb('/trip?select=*&order=created_at.desc&limit=1');
+  trip = (rows && rows[0]) ? rows[0] : { id:null, mountain:'', route:'', start_date:'', duration:2 };
+}
+async function loadMembers(){ members = await sb('/members?select=*&order=created_at.asc') || []; }
+async function loadGear(){ gearItems = await sb('/gear?select=*&order=category.asc,name.asc') || []; }
+async function loadSchedule(){ scheduleItems = await sb('/schedule?select=*&order=day.asc,time.asc') || []; }
+async function loadAll(){ await Promise.all([loadTrip(), loadMembers(), loadGear(), loadSchedule()]); }
+
+async function manualRefresh(){
+  try{ clearSyncError(); await loadAll(); render(); }
+  catch(e){ showSyncError(e.message); }
+}
+
+/* ---------- GATE / AUTH ---------- */
+
+// PIN admin — ganti nilai di bawah ini sesuai keinginanmu.
+// Siapa pun yang tahu PIN ini dan memasukkan email yang terdaftar sebagai admin bisa masuk sebagai admin.
+const ADMIN_PIN = '1234';
+
+async function refreshGate(){
+  document.getElementById('gate-sub').textContent = 'Menghubungkan ke database...';
+  document.getElementById('gate-body').classList.add('hidden');
+  try{
+    await loadMembers();
+    setupGate();
+  }catch(e){
+    document.getElementById('gate-sub').textContent = 'Gagal terhubung ke Supabase: ' + e.message;
+  }
+}
+
+function setupGate(){
+  document.getElementById('gate-sub').textContent = 'Masukkan email kamu untuk membuka rencana ini.';
+  document.getElementById('gate-body').classList.remove('hidden');
+  document.getElementById('panel-email').classList.remove('hidden');
+  document.getElementById('panel-claim-admin').classList.add('hidden');
+  document.getElementById('panel-admin-pin').classList.add('hidden');
+  document.getElementById('email-error').classList.add('hidden');
+  document.getElementById('user-email').value = '';
+  pendingAdminAction = null;
+  pendingAdminMember = null;
+}
+
+function isValidEmail(email){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
+
+// pendingAdminAction: 'login' (email admin yang sudah terdaftar) atau 'claim' (jadi admin pertama)
+let pendingAdminAction = null;
+let pendingAdminMember = null;
+
+async function submitLogin(){
+  const input = document.getElementById('user-email');
+  const email = input.value.trim().toLowerCase();
+  const err = document.getElementById('email-error');
+  err.classList.add('hidden');
+  if(!isValidEmail(email)){ err.classList.remove('hidden'); return; }
+
+  try{
+    await loadMembers();
+    const existing = members.find(m => m.email.toLowerCase() === email);
+    if(existing){
+      if(existing.role === 'admin'){
+        showAdminPinPanel('login', existing, email);
+      } else {
+        enterApp(false, existing.id, email);
+      }
+      return;
+    }
+    const adminExists = members.some(m => m.role === 'admin');
+    if(!adminExists){
+      pendingEmail = email;
+      document.getElementById('panel-email').classList.add('hidden');
+      document.getElementById('panel-claim-admin').classList.remove('hidden');
+      document.getElementById('claim-email-label').textContent = email;
+    } else {
+      err.textContent = 'Email tidak terdaftar. Hubungi admin rencana ini untuk didaftarkan sebagai anggota.';
+      err.classList.remove('hidden');
+    }
+  }catch(e){
+    err.textContent = 'Gagal terhubung ke Supabase: ' + e.message;
+    err.classList.remove('hidden');
+  }
+}
+
+function showAdminPinPanel(action, member, email){
+  pendingAdminAction = action;
+  pendingAdminMember = member;
+  pendingEmail = email;
+  document.getElementById('panel-email').classList.add('hidden');
+  document.getElementById('panel-claim-admin').classList.add('hidden');
+  document.getElementById('panel-admin-pin').classList.remove('hidden');
+  document.getElementById('adminpin-note').innerHTML = `Masukkan PIN admin untuk <b>${escapeHtml(email)}</b>.`;
+  document.getElementById('adminpin-error').classList.add('hidden');
+  document.getElementById('admin-pin').value = '';
+}
+
+async function submitAdminPin(){
+  const entered = document.getElementById('admin-pin').value.trim();
+  const err = document.getElementById('adminpin-error');
+  err.classList.add('hidden');
+
+  // Ini bagian intinya: PIN dicek langsung terhadap konstanta di kode, seperti if/else biasa.
+  if(entered === ADMIN_PIN){
+    if(pendingAdminAction === 'claim'){
+      try{
+        const inserted = await sb('/members', { method:'POST', body: JSON.stringify({ email: pendingEmail, role:'admin' }) });
+        members.push(inserted[0]);
+        pendingAdminAction = null;
+        enterApp(true, inserted[0].id, pendingEmail);
+      }catch(e){
+        err.textContent = 'Gagal menyimpan ke Supabase: ' + e.message;
+        err.classList.remove('hidden');
+      }
+    } else {
+      const member = pendingAdminMember;
+      pendingAdminAction = null;
+      pendingAdminMember = null;
+      enterApp(true, member.id, member.email.toLowerCase());
+    }
+  } else {
+    err.textContent = 'PIN salah.';
+    err.classList.remove('hidden');
+  }
+}
+
+async function claimAdmin(yes){
+  if(!yes){
+    try{
+      const inserted = await sb('/members', { method:'POST', body: JSON.stringify({ email: pendingEmail, role:'member' }) });
+      members.push(inserted[0]);
+      enterApp(false, inserted[0].id, pendingEmail);
+    }catch(e){
+      alert('Gagal menyimpan ke Supabase: ' + e.message);
+    }
+    return;
+  }
+  showAdminPinPanel('claim', null, pendingEmail);
+}
+
+async function enterApp(admin, memberId, email){
+  isAdmin = admin;
+  currentMemberId = memberId;
+  currentEmail = email;
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('role-label').textContent = admin ? `${email} (Admin)` : email;
+  try{
+    clearSyncError();
+    await loadAll();
+    render();
+  }catch(e){
+    showSyncError('Gagal memuat data: ' + e.message);
+  }
+}
+
+function logout(){
+  isAdmin = false; currentMemberId = null; currentEmail = null;
+  document.getElementById('gate').classList.remove('hidden');
+  refreshGate();
+}
+
+/* ---------- RENDER ---------- */
+function render(){
+  document.getElementById('gunung').value = trip.mountain || '';
+  document.getElementById('tanggal').value = trip.start_date || '';
+  document.getElementById('hari').value = trip.duration || 1;
+  document.getElementById('jalur').value = trip.route || '';
+
+  ['gunung','tanggal','hari','jalur'].forEach(key=>{
+    document.getElementById(key).disabled = !isAdmin;
+  });
+
+  document.getElementById('tim-add-row').style.display = isAdmin ? 'flex' : 'none';
+  document.getElementById('member-tim-hint').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('gear-add-row').style.display = isAdmin ? 'grid' : 'none';
+  document.getElementById('jadwal-add-row').style.display = isAdmin ? 'grid' : 'none';
+  document.getElementById('member-gear-hint').style.display = isAdmin ? 'none' : 'block';
+
+  renderTim();
+  renderGear();
+  renderJadwal();
+}
+
+/* ---------- TRIP FIELDS ---------- */
+const fieldToColumn = { gunung:'mountain', tanggal:'start_date', hari:'duration', jalur:'route' };
+Object.keys(fieldToColumn).forEach(key=>{
+  document.getElementById(key).addEventListener('change', async (e)=>{
+    if(!isAdmin) return;
+    const column = fieldToColumn[key];
+    let value = e.target.value;
+    if(key === 'hari') value = parseInt(value) || 1;
+    trip[column] = value;
+    try{
+      clearSyncError();
+      if(trip.id){
+        await sb(`/trip?id=eq.${trip.id}`, { method:'PATCH', body: JSON.stringify({ [column]: value }) });
+      } else {
+        const payload = { mountain: trip.mountain||'', route: trip.route||'', start_date: trip.start_date||null, duration: trip.duration||1 };
+        const inserted = await sb('/trip', { method:'POST', body: JSON.stringify(payload) });
+        trip = inserted[0];
+      }
+    }catch(err){ showSyncError('Gagal menyimpan info gunung: ' + err.message); }
+  });
+});
+
+/* ---------- TIM (members) ---------- */
+function renderTim(){
+  const list = document.getElementById('tim-list');
+  document.getElementById('tim-count').textContent = members.length + ' orang';
+  if(members.length === 0){
+    list.innerHTML = '<div class="empty-note">Belum ada anggota tim.</div>';
+  } else {
+    list.innerHTML = members.map(p => `
+      <div class="tim-chip ${p.id===currentMemberId ? 'me' : ''} ${p.role==='admin' ? 'is-admin' : ''}">
+        <span class="dot"></span>${escapeHtml(p.email)}
+        ${p.role==='admin' ? '<span class="badge">ADMIN</span>' : ''}
+        ${isAdmin && p.role!=='admin' ? `<button onclick="removeTim('${p.id}','${escapeHtml(p.email)}')" title="Hapus">✕</button>` : ''}
+      </div>
+    `).join('');
+  }
+  if(isAdmin){
+    const assignSel = document.getElementById('gear-assign');
+    assignSel.innerHTML = '<option value="">Belum ditentukan</option>' +
+      members.map(p => `<option value="${escapeHtml(p.email)}">${escapeHtml(p.email)}</option>`).join('');
+  }
+}
+
+async function addTim(){
+  if(!isAdmin) return;
+  const input = document.getElementById('tim-input');
+  const email = input.value.trim().toLowerCase();
+  if(!isValidEmail(email)) return;
+  if(members.some(p => p.email.toLowerCase() === email)) return;
+  try{
+    clearSyncError();
+    const inserted = await sb('/members', { method:'POST', body: JSON.stringify({ email, role:'member' }) });
+    members.push(inserted[0]);
+    input.value = '';
+    renderTim(); renderGear();
+  }catch(e){ showSyncError('Gagal menambah anggota: ' + e.message); }
+}
+
+async function removeTim(id, email){
+  if(!isAdmin) return;
+  const ok = confirm(`Yakin ingin menghapus anggota "${email}"?\n\nBarang bawaan pribadi milik anggota ini akan ikut terhapus. Barang kelompok yang ditugaskan ke anggota ini hanya akan dilepas penugasannya (barang tetap ada).`);
+  if(!ok) return;
+  try{
+    clearSyncError();
+    const ownerFilter = `owner_email=eq.${encodeURIComponent(email)}`;
+    // Hapus dulu semua referensi di tabel gear SEBELUM menghapus anggota,
+    // supaya tidak melanggar foreign key constraint gear_owner_email_fkey.
+    await sb(`/gear?${ownerFilter}&category=eq.${encodeURIComponent('Perlengkapan Pribadi')}`, { method:'DELETE' });
+    await sb(`/gear?${ownerFilter}&category=neq.${encodeURIComponent('Perlengkapan Pribadi')}`, { method:'PATCH', body: JSON.stringify({ owner_email:null }) });
+    await sb(`/members?id=eq.${id}`, { method:'DELETE' });
+    members = members.filter(p => p.id !== id);
+    await loadGear();
+    renderTim(); renderGear();
+  }catch(e){ showSyncError('Gagal menghapus anggota: ' + e.message); }
+}
+
+/* ---------- GEAR ---------- */
+function renderGear(){
+  const container = document.getElementById('gear-lists');
+  const visibleCount = gearItems.filter(g => {
+    if(g.category !== 'Perlengkapan Pribadi') return true;
+    const owner = (g.owner_email || '').toLowerCase();
+    return currentEmail && owner === currentEmail;
+  }).length;
+  document.getElementById('gear-count').textContent = visibleCount + ' barang';
+  const cats = ['Perlengkapan Pribadi','Perlengkapan Kelompok','P3K & Darurat','Makanan & Masak'];
+  const sections = cats.map(cat => {
+    const isPersonal = cat === 'Perlengkapan Pribadi';
+    // Perlengkapan Pribadi: hanya tampilkan barang milik email yang sedang login.
+    // Tidak ada pengecualian untuk admin — privasi berlaku untuk semua orang.
+    const items = gearItems.filter(g => {
+      if(g.category !== cat) return false;
+      if(isPersonal){
+        const owner = (g.owner_email || '').toLowerCase();
+        return currentEmail && owner === currentEmail;
+      }
+      return true;
+    });
+    if(items.length === 0) return '';
+    return `
+      <div class="gear-category">
+        <h3>${cat}</h3>
+        ${items.map(g => {
+          const owner = (g.owner_email || '').toLowerCase();
+          const canCheck = isPersonal ? (currentEmail && owner === currentEmail) : (isAdmin || (currentEmail && owner === currentEmail));
+          const canRemove = isPersonal ? (currentEmail && owner === currentEmail) : isAdmin;
+          return `
+          <div class="gear-item ${g.packed ? 'packed':''} ${owner===currentEmail ? 'mine':''}">
+            <button class="checkbox ${g.packed?'checked':''} ${canCheck?'':'locked'}" ${canCheck? `onclick="toggleGear('${g.id}', ${!!g.packed})"` : ''} title="${canCheck?'Tandai dibawa':'Hanya orang yang ditugaskan bisa mencentang'}"></button>
+            <div>
+              <div class="item-name">${escapeHtml(g.name)}</div>
+              <div class="item-qty">${escapeHtml(g.quantity||'')}</div>
+            </div>
+            ${isPersonal ? `<span class="assign-label">Milikmu</span>` : (isAdmin ? `
+              <select class="assign" onchange="assignGear('${g.id}', this.value)">
+                <option value="" ${!g.owner_email?'selected':''}>Belum ditentukan</option>
+                ${members.map(p=>`<option value="${escapeHtml(p.email)}" ${g.owner_email===p.email?'selected':''}>${escapeHtml(p.email)}</option>`).join('')}
+              </select>
+            ` : `<span class="assign-label" title="${escapeHtml(g.owner_email||'')}">${g.owner_email ? escapeHtml(g.owner_email) : 'Belum ditentukan'}</span>`)}
+            <span></span>
+            ${canRemove ? `<button class="remove-x" onclick="removeGear('${g.id}')" title="Hapus">✕</button>` : `<span></span>`}
+          </div>
+        `;
+        }).join('')}
+      </div>
+    `;
+  }).join('');
+  container.innerHTML = sections || '<div class="empty-note">Belum ada perlengkapan.</div>';
+}
+
+async function addGear(){
+  if(!isAdmin) return;
+  const name = document.getElementById('gear-name').value.trim();
+  const category = document.getElementById('gear-cat').value;
+  const quantity = document.getElementById('gear-qty').value.trim();
+  const owner_email = document.getElementById('gear-assign').value || null;
+  if(!name) return;
+  try{
+    clearSyncError();
+    const inserted = await sb('/gear', { method:'POST', body: JSON.stringify({ category, name, quantity, owner_email, packed:false }) });
+    gearItems.push(inserted[0]);
+    document.getElementById('gear-name').value = '';
+    document.getElementById('gear-qty').value = '';
+    renderGear();
+  }catch(e){ showSyncError('Gagal menambah barang: ' + e.message); }
+}
+
+async function addPersonalGear(){
+  if(!currentEmail) return;
+  const name = document.getElementById('pgear-name').value.trim();
+  const quantity = document.getElementById('pgear-qty').value.trim();
+  if(!name) return;
+  try{
+    clearSyncError();
+    const inserted = await sb('/gear', { method:'POST', body: JSON.stringify({ category:'Perlengkapan Pribadi', name, quantity, owner_email: currentEmail, packed:false }) });
+    gearItems.push(inserted[0]);
+    document.getElementById('pgear-name').value = '';
+    document.getElementById('pgear-qty').value = '';
+    renderGear();
+  }catch(e){ showSyncError('Gagal menambah barang pribadi: ' + e.message); }
+}
+
+async function toggleGear(id, currentlyPacked){
+  const g = gearItems.find(x=>x.id===id);
+  const owner = (g?.owner_email || '').toLowerCase();
+  const isPersonal = g?.category === 'Perlengkapan Pribadi';
+  const canCheck = isPersonal ? (currentEmail && owner === currentEmail) : (isAdmin || (currentEmail && owner === currentEmail));
+  if(!g || !canCheck) return;
+  try{
+    clearSyncError();
+    const updated = await sb(`/gear?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ packed: !currentlyPacked }) });
+    g.packed = updated[0].packed;
+    renderGear();
+  }catch(e){ showSyncError('Gagal menyimpan centang: ' + e.message); }
+}
+
+async function assignGear(id, owner_email){
+  if(!isAdmin) return;
+  owner_email = owner_email || null;
+  try{
+    clearSyncError();
+    const updated = await sb(`/gear?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ owner_email }) });
+    const g = gearItems.find(x=>x.id===id);
+    if(g) g.owner_email = updated[0].owner_email;
+    renderGear();
+  }catch(e){ showSyncError('Gagal mengubah penanggung jawab: ' + e.message); }
+}
+
+async function removeGear(id){
+  const g = gearItems.find(x=>x.id===id);
+  if(!g) return;
+  const isPersonal = g.category === 'Perlengkapan Pribadi';
+  const owner = (g.owner_email || '').toLowerCase();
+  const allowed = isPersonal ? (currentEmail && owner === currentEmail) : isAdmin;
+  if(!allowed) return;
+  try{
+    clearSyncError();
+    await sb(`/gear?id=eq.${id}`, { method:'DELETE' });
+    gearItems = gearItems.filter(g => g.id !== id);
+    renderGear();
+  }catch(e){ showSyncError('Gagal menghapus barang: ' + e.message); }
+}
+
+/* ---------- JADWAL (schedule) ---------- */
+function renderJadwal(){
+  const list = document.getElementById('jadwal-list');
+  document.getElementById('jadwal-count').textContent = scheduleItems.length + ' agenda';
+  if(scheduleItems.length === 0){
+    list.innerHTML = '<div class="empty-note">Belum ada agenda.</div>';
+    return;
+  }
+  const sorted = [...scheduleItems].sort((a,b)=> a.day - b.day || String(a.time).localeCompare(String(b.time)));
+  list.innerHTML = sorted.map(j => `
+    <div class="tl-item">
+      <div class="tl-head">
+        <span class="tl-day">HARI ${j.day}</span>
+        <span class="tl-time">${String(j.time).slice(0,5)}</span>
+      </div>
+      <div class="tl-activity">${escapeHtml(j.activity)}</div>
+      ${j.note ? `<div class="tl-note">${escapeHtml(j.note)}</div>` : ''}
+      ${isAdmin ? `<button class="remove-x" onclick="removeJadwal('${j.id}')" title="Hapus">✕</button>` : ''}
+    </div>
+  `).join('');
+}
+
+async function addJadwal(){
+  if(!isAdmin) return;
+  const day = parseInt(document.getElementById('j-hari').value) || 1;
+  const time = document.getElementById('j-waktu').value || '00:00';
+  const activity = document.getElementById('j-kegiatan').value.trim();
+  const note = document.getElementById('j-ket').value.trim();
+  if(!activity) return;
+  try{
+    clearSyncError();
+    const inserted = await sb('/schedule', { method:'POST', body: JSON.stringify({ day, time, activity, note }) });
+    scheduleItems.push(inserted[0]);
+    document.getElementById('j-kegiatan').value = '';
+    document.getElementById('j-ket').value = '';
+    renderJadwal();
+  }catch(e){ showSyncError('Gagal menambah jadwal: ' + e.message); }
+}
+
+async function removeJadwal(id){
+  if(!isAdmin) return;
+  try{
+    clearSyncError();
+    await sb(`/schedule?id=eq.${id}`, { method:'DELETE' });
+    scheduleItems = scheduleItems.filter(j => j.id !== id);
+    renderJadwal();
+  }catch(e){ showSyncError('Gagal menghapus jadwal: ' + e.message); }
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str ?? '';
+  return d.innerHTML;
+}
+
+(async function init(){ await refreshGate(); })();
+</script>
+</body>
+</html>
